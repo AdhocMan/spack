@@ -93,14 +93,12 @@ class Vasp(MakefilePackage, CudaPackage):
         include_flags = [
                 spec["fftw-api"].headers.include_flags,
                 spec["blas"].headers.include_flags,
-                spec["mpi"].headers.include_flags
         ]
         include_flags.extend(["-I{}".format(libdir) for libdir in spec["mpi"].libs.directories])
         link_flags = [
                 "-lstdc++",
                 spec["fftw-api"].libs.ld_flags,
                 spec["blas"].libs.ld_flags,
-                spec["mpi"].libs.ld_flags,
         ]
 
         free_flags = []
@@ -111,16 +109,18 @@ class Vasp(MakefilePackage, CudaPackage):
 
 
         preprocess_flags = [
-            "-DMPI -DMPI_BLOCK=8000",
+            "-DMPI",
+            "-DMPI_BLOCK=8000",
             "-Duse_collective",
             "-DCACHE_SIZE=4000",
             "-Davoidalloc",
             "-Duse_bse_te",
             "-Dtbdyn",
             "-Dvasp6",
-            "-DscaLAPACK",
             "-Dfock_dblbuf"
         ]
+
+
 
         if "%gcc" in spec:
             free_flags.extend(["-ffree-form", "-ffree-line-length-none"])
@@ -133,21 +133,30 @@ class Vasp(MakefilePackage, CudaPackage):
         if "+cuda" in spec:
             nvhpc_prefix = join_path(spec["nvhpc"].prefix, "Linux_%s" % self.spec.target.family, spec["nvhpc"].version)
             qd_prefix = join_path(nvhpc_prefix, "compilers", "extras", "qd")
+            cuda_arch = [60, 70, 80]
+            if self.spec.variants["cuda_arch"].value != "none":
+                cuda_arch = self.spec.variants["cuda_arch"].value
 
             objects.extend(["fftw3d_gpu.o", "fftmpiw_gpu.o"])
             ft_compiler = join_path(nvhpc_prefix, "compilers", "bin", "nvfortran")
 
             nv_free_flags.extend(["-Mfree"])
             nvft_flags.extend(["-Mbackslash", "-Mlarge_arrays"])
-            nvft_flags.extend(["-acc", "-gpu={},cuda{}".format(",".join(["cc{}".format(arch) for arch in self.spec.variants["cuda_arch"].value]), spec["cuda"].version.up_to(2))])
+            nvft_flags.extend(["-acc", "-gpu={},cuda{}".format(",".join(["cc{}".format(arch) for arch in cuda_arch]), spec["cuda"].version.up_to(2))])
+            link_flags.extend(["-acc", "-gpu={},cuda{}".format(",".join(["cc{}".format(arch) for arch in cuda_arch]), spec["cuda"].version.up_to(2))])
             link_flags.extend(["-cudalib=cublas,cusolver,cufft,nccl", "-cuda", "-L{}".format(join_path(qd_prefix, "lib")), "-lqdmod", "-lqd"])
             include_flags.append("-I{}".format(join_path(qd_prefix, "include", "qd")))
             preprocess_flags.extend(["-D_OPENACC", "-DUSENCCL", "-DUSENCCLP2P", "-Dqd_emulate"])
             nvft_flags_lib.append("-Mfixed")
-
-
             # -Mfixed -Mfree order. Otherwise nvfortran throws error
             # add -Mfixed only to FFLAGS_LIB
+
+
+        if "^nvhpc +mpi" in spec:
+            ft_compiler = spec["mpi"].mpifc
+        else:
+            include_flags.append(spec["mpi"].headers.include_flags)
+            link_flags.append(spec["mpi"].libs.ld_flags,)
 
         if "+openmp" in spec:
             c_flags.append(self.compiler.openmp_flag)
@@ -155,11 +164,11 @@ class Vasp(MakefilePackage, CudaPackage):
             preprocess_flags.append("-D_OPENMP")
 
             if "+cuda" in spec:
+                nvft_flags.append("-mp")
+                link_flags.append("-mp")
+            else:
                 nvft_flags.append(self.compiler.openmp_flag)
                 link_flags.append(self.compiler.openmp_flag)
-            else:
-                ft_flags.append("-mp")
-                link_flags.append("-mp")
 
             # add internal fftlib for openmp as is recommended
             preprocess_flags.append("-Dsysv")
@@ -177,6 +186,7 @@ class Vasp(MakefilePackage, CudaPackage):
         if "+scalapack" in spec:
             link_flags.append(spec["scalapack"].libs.ld_flags)
             include_flags.append(spec["scalapack"].headers.include_flags)
+            preprocess_flags.append("-DscaLAPACK")
 
         # generate makefile
         makefile_inc = []
@@ -206,17 +216,13 @@ class Vasp(MakefilePackage, CudaPackage):
         makefile_inc.append("CFLAGS_LIB = -O2")
         makefile_inc.append("DEBUG = -O0")
 
-        makefile_inc.append("CXX_FFTLIB = {} {} {}".format(self.compiler.cxx, self.compiler.openmp_flag, "-std=c++11 -DFFTLIB_THREADSAFE"))
+        makefile_inc.append("CXX_FFTLIB = {} {} {}".format(self.compiler.cxx,  self.compiler.openmp_flag if "+openmp" in spec else " ", "-std=c++11 -DFFTLIB_THREADSAFE"))
         makefile_inc.append("INCS_FFTLIB = -I./include {}".format(spec["fftw-api"].headers.include_flags))
+        makefile_inc.append("OBJECTS_LIB = linpack_double.o")
 
         if len(internal_libs) > 1:
             makefile_inc.append("LIBS += {}".format(" ".join(internal_libs)))
 
-
-        print("\n", file=sys.stderr)
-        print(spec["mpi"].libs, file=sys.stderr)
-        print("\n", file=sys.stderr)
-        print("\n".join(makefile_inc), file=sys.stderr)
         with open("makefile.include", "w") as fm:
             fm.write("\n".join(makefile_inc))
 
