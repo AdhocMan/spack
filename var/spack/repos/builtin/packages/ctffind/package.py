@@ -35,6 +35,8 @@ class Ctffind(AutotoolsPackage):
     patch("configure.patch", when="@4.1.8")
     patch("no_sincos_asm.patch", when="@4.1.14 target=power9le")
     patch("no_sincos_asm.patch", when="@4.1.14 target=aarch64:")
+    patch("no_sincos_asm.patch", when="@4.1.14 target=neoverse_v1")
+    patch("no_sincos_asm.patch", when="@4.1.14 target=neoverse_n1")
     patch("fix_return_types.patch", when="@4.1.13:4.1.14")
 
     def configure_args(self):
