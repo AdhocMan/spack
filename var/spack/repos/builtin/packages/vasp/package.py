@@ -9,7 +9,7 @@ import sys
 from spack.package import *
 
 
-class Vasp(MakefilePackage, CudaPackage):
+class Vasp(CMakePackage, CudaPackage):
     """
     The Vienna Ab initio Simulation Package (VASP)
     is a computer program for atomic scale materials modelling,
@@ -36,18 +36,23 @@ class Vasp(MakefilePackage, CudaPackage):
         when="+vaspsol",
     )
 
-    variant("openmp", default=False, description="Enable openmp build")
-    variant("scalapack", default=False, description="Enables build with SCALAPACK")
-    variant("cuda", default=False, description="Enables running on Nvidia GPUs")
-    variant("fftlib", default=False, description="Enables fftlib build")
-    variant(
-        "vaspsol",
-        default=False,
-        description="Enable VASPsol implicit solvation model\n"
-        "https://github.com/henniggroup/VASPsol",
-    )
-    variant("shmem", default=False, description="Enable use_shmem build flag")
-    variant("hdf5", default=True, description="Enable hdf5 support")
+    variant("profiling", default=False, description="Enable profiling")
+    variant("collective", default=True, description="Enable collective MPI calls")
+    variant("avoidalloc", default=False, description="Enable avoidance of automatic allocations")
+    variant("vasp6", default=True, when="@6:", description="Enable VASP 6.x features")
+    variant("tbdyn", default=True, description="Enable advanced molecular dynamics")
+    variant("fock_dblbuf", default=False, description="Enable double buffering for exchange potential")
+    variant("shmem", default=False, description="Enable shared memory for reduced memory usage")
+    variant("shmem_bcast", default=False, description="")
+    variant("shmem_rproj", default=False, description="")
+    variant("sysv", default=False, description="")
+    variant("openmp", default=True, description="")
+    variant("fftlib", when="+openmp", default=True, description="")
+    variant("scalapack", default=False, description="")
+    variant("hdf5", default=False, description="")
+    variant("wannier90", default=False, description="")
+    variant("libxc", default=False, description="")
+    variant("ncclp2p", when="+cuda", default=True, description="")
 
 
     with when("+openmp"):
@@ -58,12 +63,12 @@ class Vasp(MakefilePackage, CudaPackage):
         conflicts("^openblas threads=none")
         conflicts("^openblas threads=pthreads")
 
-    with when("+fftlib"):
-        conflicts("@:6.1.1", msg="fftlib support started from 6.2.0")
-        conflicts("~openmp", msg="fftlib is intended to be used with openmp")
+    requires(
+        "%nvhpc",
+        when="+cuda",
+        msg="NVHPC compiler is required for CUDA support"
+    )
 
-
-    depends_on("rsync", type="build")
     depends_on("blas")
     depends_on("lapack")
     depends_on("fftw-api@3:")
@@ -72,261 +77,55 @@ class Vasp(MakefilePackage, CudaPackage):
     depends_on("scalapack", when="+scalapack")
     depends_on("nvhpc~blas~lapack", when="+cuda")
     depends_on("hdf5+fortran", when="+hdf5")
+    depends_on("libxc~cuda", when="+libxc")
+    depends_on("wannier90", when="+wannier90")
 
     conflicts(
         "%gcc@:8", msg="GFortran before 9.x does not support all features needed to build VASP"
     )
-    conflicts("+vaspsol", when="+cuda", msg="+vaspsol only available for CPU")
-    conflicts("+openmp", when="@:6.1.1", msg="openmp support started from 6.2")
 
-    def edit(self, spec, prefix):
-        if "+vaspsol" in spec:
-            copy("VASPsol/src/solvation.F", "src/")
+    patch("cmake.patch")
 
-        c_flags = []
-        cxx_flags = ["-std=c++11"]
-        ft_flags = []
-        ft_flags_lib = []
-        nvft_flags = []
-        nvft_flags_lib = []
-        ft_compiler = self.compiler.fc
-        include_flags = [
-                spec["fftw-api"].headers.include_flags,
-                spec["blas"].headers.include_flags,
-        ]
-        include_flags.extend(["-I{}".format(libdir) for libdir in spec["mpi"].libs.directories])
-        link_flags = [
-                "-lstdc++",
-                spec["fftw-api"].libs.ld_flags,
-                spec["blas"].libs.ld_flags,
-        ]
+    def cmake_args(self):
+        spec = self.spec
 
-        free_flags = []
-        nv_free_flags = []
-        objects = ["fftmpiw.o", "fftmpi_map.o", "fftw3d.o", "fft3dlib.o"]
-
-        internal_libs = []
-
-
-        preprocess_flags = [
-            "-DMPI",
-            "-DMPI_BLOCK=8000",
-            "-Duse_collective",
-            "-DCACHE_SIZE=4000",
-            "-Davoidalloc",
-            "-Duse_bse_te",
-            "-Dtbdyn",
-            "-Dvasp6",
-            "-Dfock_dblbuf"
+        args = [
+            self.define_from_variant("VASP_PROFILING", "profiling"),
+            self.define_from_variant("VASP_COLLECTIVE", "collective"),
+            self.define_from_variant("VASP_AVOIDALLOC", "avoidalloc"),
+            self.define_from_variant("VASP_VASP6", "vasp6"),
+            self.define_from_variant("VASP_TBDYN", "tbdyn"),
+            self.define_from_variant("VASP_FOCK_DBLBUF", "fock_dblbuf"),
+            self.define_from_variant("VASP_SHMEM", "shmem"),
+            self.define_from_variant("VASP_SHMEM_BCAST", "shmem_bcast"),
+            self.define_from_variant("VASP_SHMEM_RPROJ", "shmem_rproj"),
+            self.define_from_variant("VASP_SYSV", "sysv"),
+            self.define_from_variant("VASP_OPENMP", "openmp"),
+            self.define_from_variant("VASP_FFTLIB", "fftlib"),
+            self.define_from_variant("VASP_SCALAPCK", "scalapack"),
+            self.define_from_variant("VASP_HDF5", "hdf5"),
+            self.define_from_variant("VASP_WANNIER90", "wannier90"),
+            self.define_from_variant("VASP_LIBXC", "libxc"),
+            self.define_from_variant("VASP_CUDA", "cuda"),
+            self.define_from_variant("VASP_NCCLP2P", "ncclp2p"),
+            "-DVASP_LIBBEEF=OFF",
+            "-DVASP_DFTD4=OFF",
         ]
 
 
+        if spec.satisfies("+cuda"):
+            cuda_arch = self.spec.variants["cuda_arch"].value
+            if cuda_arch[0] != "none":
+                args += [self.define("CMAKE_CUDA_ARCHITECTURES", cuda_arch)]
+            args += [self.define("QD_ROOT", join_path(spec["nvhpc"].prefix, "Linux_%s" % self.spec.target.family, spec["nvhpc"].version))]
 
-        if "%gcc" in spec:
-            free_flags.extend(["-ffree-form", "-ffree-line-length-none"])
-            ft_flags.extend(["-w", "-ffpe-summary=none", "-fallow-argument-mismatch"])
-            preprocess_flags.extend(["-E", "-C", "-w"])
+        if "^armpl-gcc" in spec:
+            args += ["-DBLA_VENDOR=Armp"]
 
-        if "%gcc@10:" in spec:
-            ft_flags.append("-fallow-argument-mismatch")
+        return args
 
-        if "+cuda" in spec:
-            nvhpc_prefix = join_path(spec["nvhpc"].prefix, "Linux_%s" % self.spec.target.family, spec["nvhpc"].version)
-            qd_prefix = join_path(nvhpc_prefix, "compilers", "extras", "qd")
-            cuda_arch = [60, 70, 80]
-            if self.spec.variants["cuda_arch"].value != "none":
-                cuda_arch = self.spec.variants["cuda_arch"].value
-
-            objects.extend(["fftw3d_gpu.o", "fftmpiw_gpu.o"])
-            ft_compiler = join_path(nvhpc_prefix, "compilers", "bin", "nvfortran")
-
-            nv_free_flags.extend(["-Mfree"])
-            nvft_flags.extend(["-Mbackslash", "-Mlarge_arrays"])
-            nvft_flags.extend(["-acc", "-gpu={},cuda{}".format(",".join(["cc{}".format(arch) for arch in cuda_arch]), spec["cuda"].version.up_to(2))])
-            link_flags.extend(["-acc", "-gpu={},cuda{}".format(",".join(["cc{}".format(arch) for arch in cuda_arch]), spec["cuda"].version.up_to(2))])
-            link_flags.extend(["-cudalib=cublas,cusolver,cufft,nccl", "-cuda", "-L{}".format(join_path(qd_prefix, "lib")), "-lqdmod", "-lqd"])
-            include_flags.append("-I{}".format(join_path(qd_prefix, "include", "qd")))
-            preprocess_flags.extend(["-D_OPENACC", "-DUSENCCL", "-DUSENCCLP2P", "-Dqd_emulate"])
-            nvft_flags_lib.append("-Mfixed")
-            # -Mfixed -Mfree order. Otherwise nvfortran throws error
-            # add -Mfixed only to FFLAGS_LIB
-
-
-        if "^nvhpc +mpi" in spec:
-            ft_compiler = spec["mpi"].mpifc
-        else:
-            include_flags.append(spec["mpi"].headers.include_flags)
-            link_flags.append(spec["mpi"].libs.ld_flags,)
-
-        if "+openmp" in spec:
-            c_flags.append(self.compiler.openmp_flag)
-            cxx_flags.append(self.compiler.openmp_flag)
-            preprocess_flags.append("-D_OPENMP")
-
-            if "+cuda" in spec:
-                nvft_flags.append("-mp")
-                link_flags.append("-mp")
-            else:
-                nvft_flags.append(self.compiler.openmp_flag)
-                link_flags.append(self.compiler.openmp_flag)
-
-            # add internal fftlib for openmp as is recommended
-            preprocess_flags.append("-Dsysv")
-            internal_libs.append("fftlib")
-            link_flags.append("fftlib.o")
-
-        if "+hdf5" in spec:
-            link_flags.append(spec["hdf5"].libs.ld_flags)
-            include_flags.append(spec["hdf5"].headers.include_flags)
-            preprocess_flags.append("-DVASP_HDF5")
-
-        #  if "+shmem" in spec:
-        #      preprocess_flags.append("-Duse_shmem")
-
-        if "+scalapack" in spec:
-            link_flags.append(spec["scalapack"].libs.ld_flags)
-            include_flags.append(spec["scalapack"].headers.include_flags)
-            preprocess_flags.append("-DscaLAPACK")
-
-        # generate makefile
-        makefile_inc = []
-
-        if "+cuda" in spec:
-            ft_flags = nvft_flags
-            free_flags = nv_free_flags
-            ft_flags_lib = nvft_flags_lib
-
-        makefile_inc.append("CPP = {} {} {}".format(self.compiler.cc, " ".join(preprocess_flags), "$*$(FUFFIX) >$*$(SUFFIX)"))
-        makefile_inc.append("CPP_LIB = $(CPP)")
-        makefile_inc.append("FC = {}".format(ft_compiler))
-        makefile_inc.append("FCL = {}".format(ft_compiler))
-        makefile_inc.append("FC_LIB = {}".format(ft_compiler))
-        makefile_inc.append("CC_LIB = {}".format(self.compiler.cc))
-        makefile_inc.append("CXX_PARS = {}".format(self.compiler.cxx))
-
-        makefile_inc.append("OBJECTS = fftmpiw.o fftmpi_map.o fftw3d.o fft3dlib.o")
-        makefile_inc.append("FREE = {}".format(" ".join(free_flags)))
-        makefile_inc.append("FREE_LIB = {}".format(" ".join(free_flags)))
-        makefile_inc.append("LLIBS = {}".format(" ".join(link_flags)))
-        makefile_inc.append("INCS = {}".format(" ".join(include_flags)))
-        makefile_inc.append("FFLAGS = {}".format(" ".join(ft_flags)))
-        makefile_inc.append("OFLAG = -O2")
-        makefile_inc.append("OFLAG_IN = $(OFLAG)")
-        makefile_inc.append("FFLAGS_LIB = -O2 {}".format(" ".join(ft_flags_lib)))
-        makefile_inc.append("CFLAGS_LIB = -O2")
-        makefile_inc.append("DEBUG = -O0")
-
-        makefile_inc.append("CXX_FFTLIB = {} {} {}".format(self.compiler.cxx,  self.compiler.openmp_flag if "+openmp" in spec else " ", "-std=c++11 -DFFTLIB_THREADSAFE"))
-        makefile_inc.append("INCS_FFTLIB = -I./include {}".format(spec["fftw-api"].headers.include_flags))
-        makefile_inc.append("OBJECTS_LIB = linpack_double.o")
-
-        if len(internal_libs) > 1:
-            makefile_inc.append("LIBS += {}".format(" ".join(internal_libs)))
-
-        with open("makefile.include", "w") as fm:
-            fm.write("\n".join(makefile_inc))
-
-    #  def setup_build_environment(self, spack_env):
+    #  def setup_run_environment(self, env):
     #      spec = self.spec
-
-    #      cpp_options = [
-    #          "-DMPI -DMPI_BLOCK=8000",
-    #          "-Duse_collective",
-    #          "-DCACHE_SIZE=4000",
-    #          "-Davoidalloc",
-    #          "-Duse_bse_te",
-    #          "-Dtbdyn",
-    #      ]
-
-    #      if "+shmem" in spec:
-    #          cpp_options.append("-Duse_shmem")
-
-    #      if "%nvhpc" in self.spec:
-    #          cpp_options.extend(['-DHOST=\\"LinuxPGI\\"', "-DPGI16", "-Dqd_emulate"])
-    #      elif "%aocc" in self.spec:
-    #          cpp_options.extend(
-    #              [
-    #                  '-DHOST=\\"LinuxAMD\\"',
-    #                  "-Dfock_dblbuf",
-    #                  "-Dsysv",
-    #                  "-Dshmem_bcast_buffer",
-    #                  "-DNGZhalf",
-    #              ]
-    #          )
-    #          if "@6.3.0:" and "^amdfftw@4.0:" in self.spec:
-    #              cpp_options.extend(["-Dfftw_cache_plans", "-Duse_fftw_plan_effort"])
-    #          if "+openmp" in self.spec:
-    #              cpp_options.extend(["-D_OPENMP"])
-    #          cpp_options.extend(["-Mfree "])
-    #      else:
-    #          cpp_options.append('-DHOST=\\"LinuxGNU\\"')
-
-    #      if self.spec.satisfies("@6:"):
-    #          cpp_options.append("-Dvasp6")
-
-    #      cflags = ["-fPIC", "-DADD_"]
-    #      fflags = []
-    #      if "%gcc" in spec or "%intel" in spec:
-    #          fflags.append("-w")
-    #      elif "%nvhpc" in spec:
-    #          fflags.extend(["-Mnoupcase", "-Mbackslash", "-Mlarge_arrays"])
-    #      elif "%aocc" in spec:
-    #          fflags.extend(["-fno-fortran-main", "-Mbackslash"])
-    #          objects_lib = ["linpack_double.o", "getshmem.o"]
-    #          spack_env.set("OBJECTS_LIB", " ".join(objects_lib))
-
-    #      spack_env.set("BLAS", spec["blas"].libs.ld_flags)
-    #      spack_env.set("LAPACK", spec["lapack"].libs.ld_flags)
-    #      if "^amdfftw" in spec:
-    #          spack_env.set("AMDFFTW_ROOT", spec["fftw-api"].prefix)
-    #      else:
-    #          spack_env.set("FFTW", spec["fftw-api"].libs.ld_flags)
-    #      spack_env.set("MPI_INC", spec["mpi"].prefix.include)
-
-    #      if "%nvhpc" in spec:
-    #          spack_env.set("QD", spec["qd"].prefix)
-
-    #      if "+scalapack" in spec:
-    #          cpp_options.append("-DscaLAPACK")
-    #          spack_env.set("SCALAPACK", spec["scalapack"].libs.ld_flags)
-
-    #      if "+cuda" in spec:
-    #          cpp_gpu = [
-    #              "-DCUDA_GPU",
-    #              "-DRPROMU_CPROJ_OVERLAP",
-    #              "-DCUFFT_MIN=28",
-    #              "-DUSE_PINNED_MEMORY",
-    #          ]
-
-    #          objects_gpu = [
-    #              "fftmpiw.o",
-    #              "fftmpi_map.o",
-    #              "fft3dlib.o",
-    #              "fftw3d_gpu.o",
-    #              "fftmpiw_gpu.o",
-    #          ]
-
-    #          cflags.extend(["-DGPUSHMEM=300", "-DHAVE_CUBLAS"])
-
-    #          spack_env.set("CUDA_ROOT", spec["cuda"].prefix)
-    #          spack_env.set("CPP_GPU", " ".join(cpp_gpu))
-    #          spack_env.set("OBJECTS_GPU", " ".join(objects_gpu))
-
-    #      if "+vaspsol" in spec:
-    #          cpp_options.append("-Dsol_compat")
-
-    #      if spec.satisfies("%gcc@10:"):
-    #          fflags.append("-fallow-argument-mismatch")
-    #      if spec.satisfies("%aocc"):
-    #          fflags.append("-fno-fortran-main -Mbackslash -ffunc-args-alias")
-
-    #      # Finally
-    #      spack_env.set("CPP_OPTIONS", " ".join(cpp_options))
-    #      spack_env.set("CFLAGS", " ".join(cflags))
-    #      spack_env.set("FFLAGS", " ".join(fflags))
-
-    def build(self, spec, prefix):
-        make("std", "gam", "ncl")
-
-    def install(self, spec, prefix):
-        install_tree("bin/", prefix.bin)
+    #      if "^nvhpc" in spec:
+    #          env.prepend_path("CMAKE_PREFIX_PATH", spec["nvhpc"].prefix)
+    #          env.prepend_path("CMAKE_PREFIX_PATH", join_path(spec["nvhpc"].prefix, "Linux_%s" % self.spec.target.family, spec["nvhpc"].version))
