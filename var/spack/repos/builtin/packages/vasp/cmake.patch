@@ -1,4 +1,4 @@
-From 3bac037c5d491d9032cfba95f14a50c915cba1de Mon Sep 17 00:00:00 2001
+From fd207cf8f9c26d5787df3bca75c26b3290609e6e Mon Sep 17 00:00:00 2001
 From: Simon Frasch <simon.frasch@cscs.ch>
 Date: Mon, 9 Oct 2023 17:16:35 +0200
 Subject: [PATCH] init
@@ -10,8 +10,14 @@ update
 update
 
 update
+
+cmake
+
+cmake
+
+cmake
 ---
- CMakeLists.txt            | 206 ++++++++++++++++++++++++++++++++++++++
+ CMakeLists.txt            | 208 ++++++++++++++++++++++++++++++++++++++
  cmake/FindFFTW.cmake      |  71 +++++++++++++
  cmake/FindFFTWOMP.cmake   |  71 +++++++++++++
  cmake/FindLibXC.cmake     |  59 +++++++++++
@@ -22,7 +28,7 @@ update
  src/fftlib/CMakeLists.txt |   9 ++
  src/lib/CMakeLists.txt    |  32 ++++++
  src/parser/CMakeLists.txt |  11 ++
- 11 files changed, 711 insertions(+)
+ 11 files changed, 713 insertions(+)
  create mode 100644 CMakeLists.txt
  create mode 100644 cmake/FindFFTW.cmake
  create mode 100644 cmake/FindFFTWOMP.cmake
@@ -37,10 +43,10 @@ update
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 new file mode 100644
-index 0000000..f79f7e7
+index 0000000..47f8c6b
 --- /dev/null
 +++ b/CMakeLists.txt
-@@ -0,0 +1,206 @@
+@@ -0,0 +1,208 @@
 +cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 +set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 +
@@ -201,7 +207,9 @@ index 0000000..f79f7e7
 +find_package(LAPACK REQUIRED)
 +list(APPEND VASP_EXTERNAL_LIBS LAPACK::LAPACK)
 +
-+if(NOT BLA_VENDOR IN_LIST "Arm;Arm_mp")
++
++set(BLA_FFTW_PROVIDERS Arm Arm_mp)
++if(NOT BLA_VENDOR OR NOT BLA_VENDOR IN_LIST BLA_FFTW_PROVIDERS)
 +	find_package(FFTW)
 +	list(APPEND VASP_EXTERNAL_LIBS FFTW::FFTW)
 +	if(VASP_OPENMP)
@@ -744,7 +752,7 @@ index 0000000..d84e8d5
 +
 diff --git a/src/fftlib/CMakeLists.txt b/src/fftlib/CMakeLists.txt
 new file mode 100644
-index 0000000..9936c30
+index 0000000..74c2d19
 --- /dev/null
 +++ b/src/fftlib/CMakeLists.txt
 @@ -0,0 +1,9 @@
@@ -755,7 +763,7 @@ index 0000000..9936c30
 +target_link_libraries(fftlib_objects PRIVATE ${VASP_EXTERNAL_LIBS})
 +set_property(TARGET fftlib_objects PROPERTY CXX_STANDARD 14)
 +set_property(TARGET fftlib_objects PROPERTY CXX_STANDARD_REQUIRED On)
-+target_compile_definitions(fftlib_objects PRIVATE FFTLIB_THREADSAFE)
++target_compile_definitions(fftlib_objects PRIVATE FFTLIB_THREADSAFE __fp16=float) #__fp16 in fftw3 not available in pgi / nvhpc and not used in vasp
 +target_include_directories(fftlib_objects PRIVATE include)
 diff --git a/src/lib/CMakeLists.txt b/src/lib/CMakeLists.txt
 new file mode 100644
@@ -797,7 +805,7 @@ index 0000000..a5b7a8a
 +target_compile_options(lib_objects PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${LIB_FORTRAN_FLAGS}>)
 diff --git a/src/parser/CMakeLists.txt b/src/parser/CMakeLists.txt
 new file mode 100644
-index 0000000..3ec22c6
+index 0000000..238e92c
 --- /dev/null
 +++ b/src/parser/CMakeLists.txt
 @@ -0,0 +1,11 @@
@@ -810,7 +818,7 @@ index 0000000..3ec22c6
 +target_link_libraries(parser_objects PRIVATE ${VASP_EXTERNAL_LIBS})
 +set_property(TARGET parser_objects PROPERTY CXX_STANDARD 14)
 +set_property(TARGET parser_objects PROPERTY CXX_STANDARD_REQUIRED On)
-+target_compile_definitions(parser_objects PRIVATE YY_parse_DEBUG=1)
++target_compile_definitions(parser_objects PRIVATE YY_parse_DEBUG=1 __fp16=float)
 +# target_include_directories(parser_objects PRIVATE include)
 -- 
 2.39.2 (Apple Git-143)

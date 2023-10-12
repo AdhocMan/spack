@@ -119,8 +119,10 @@ class Vasp(CMakePackage, CudaPackage):
                 args += [self.define("CMAKE_CUDA_ARCHITECTURES", cuda_arch)]
             args += [self.define("QD_ROOT", join_path(spec["nvhpc"].prefix, "Linux_%s" % self.spec.target.family, spec["nvhpc"].version))]
 
-        if "^armpl-gcc" in spec:
-            args += ["-DBLA_VENDOR=Armp"]
+        if "^armpl-gcc threads=openmp" in spec:
+            args += ["-DBLA_VENDOR=Arm_mp"]
+        elif "^armpl-gcc threads=none" in spec:
+            args += ["-DBLA_VENDOR=Arm"]
 
         return args
 
