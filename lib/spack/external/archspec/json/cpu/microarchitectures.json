@@ -2948,7 +2948,7 @@
           "nvhpc" : [
               {
                   "versions": "22.5:",
-                  "name": "neoverse-n1",
+                  "name": "neoverse-v1",
                   "flags": "-tp {name}"
               }
           ]
