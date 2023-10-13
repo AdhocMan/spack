@@ -2955,7 +2955,7 @@
       }
     },
     "neoverse_v2": {
-      "from": ["neoverse_n1", "armv8.4a"],
+      "from": ["neoverse_n1", "armv8.5a"],
       "vendor": "ARM",
       "features": [
           "fp",
@@ -3008,7 +3008,11 @@
       ],
       "compilers" : {
           "gcc": [
-                            {
+              {
+                  "versions": "11:",
+                  "flags" : "-march=armv8.5-a+sve+sve2+i8mm -msve-vector-bits=128"
+              },
+	      {
                   "versions": "13.0:",
                   "flags" : "-mcpu=neoverse-v2"
               }
