@@ -102,7 +102,7 @@ class Vasp(CMakePackage, CudaPackage):
             self.define_from_variant("VASP_SYSV", "sysv"),
             self.define_from_variant("VASP_OPENMP", "openmp"),
             self.define_from_variant("VASP_FFTLIB", "fftlib"),
-            self.define_from_variant("VASP_SCALAPCK", "scalapack"),
+            self.define_from_variant("VASP_SCALAPACK", "scalapack"),
             self.define_from_variant("VASP_HDF5", "hdf5"),
             self.define_from_variant("VASP_WANNIER90", "wannier90"),
             self.define_from_variant("VASP_LIBXC", "libxc"),
