@@ -1,4 +1,4 @@
-From 07de5a8ba69aed9d5054ba4cc3fb8460cdf800cb Mon Sep 17 00:00:00 2001
+From ff6bc6243fceb1d128b751421d31d3a9a7b208d7 Mon Sep 17 00:00:00 2001
 From: Simon Frasch <simon.frasch@cscs.ch>
 Date: Mon, 9 Oct 2023 17:16:35 +0200
 Subject: [PATCH] init
@@ -22,6 +22,8 @@ fix scalapack
 update
 
 update
+
+update
 ---
  CMakeLists.txt            | 213 ++++++++++++++++++++++++++++++++++++++
  cmake/FindFFTW.cmake      |  71 +++++++++++++
@@ -30,11 +32,11 @@ update
  cmake/FindQD.cmake        |  70 +++++++++++++
  cmake/FindSCALAPACK.cmake |  65 ++++++++++++
  cmake/FindWANNIER90.cmake |  53 ++++++++++
- src/CMakeLists.txt        |  65 ++++++++++++
+ src/CMakeLists.txt        |  66 ++++++++++++
  src/fftlib/CMakeLists.txt |   9 ++
  src/lib/CMakeLists.txt    |  32 ++++++
  src/parser/CMakeLists.txt |  11 ++
- 11 files changed, 719 insertions(+)
+ 11 files changed, 720 insertions(+)
  create mode 100644 CMakeLists.txt
  create mode 100644 cmake/FindFFTW.cmake
  create mode 100644 cmake/FindFFTWOMP.cmake
@@ -693,10 +695,10 @@ index 0000000..82cf359
 +MARK_AS_ADVANCED(WANNIER90_FOUND WANNIER90_LIBRARIES WANNIER90_INCLUDE_DIRS)
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
 new file mode 100644
-index 0000000..787258f
+index 0000000..2ee38f8
 --- /dev/null
 +++ b/src/CMakeLists.txt
-@@ -0,0 +1,65 @@
+@@ -0,0 +1,66 @@
 +function(vasp_create_executable name sources)
 +	add_executable(${name} ${sources})
 +	target_compile_definitions(${name} PRIVATE ${VASP_DEFINITIONS})
@@ -715,6 +717,7 @@ index 0000000..787258f
 +# Remove from sources as needed
 +list(REMOVE_ITEM VASP_SOURCES
 +	${CMAKE_CURRENT_SOURCE_DIR}/mp2.F # outdated. Only required with scalapack, provided by ump2.F instead
++	${CMAKE_CURRENT_SOURCE_DIR}/zdotc.F
 +	${CMAKE_CURRENT_SOURCE_DIR}/dgemmtest.F
 +	${CMAKE_CURRENT_SOURCE_DIR}/zgemmtest.F
 +	${CMAKE_CURRENT_SOURCE_DIR}/ffttest.F
