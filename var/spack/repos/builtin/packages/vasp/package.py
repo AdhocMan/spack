@@ -18,23 +18,23 @@ class Vasp(CMakePackage, CudaPackage):
     """
 
     homepage = "https://vasp.at"
-    url = "file://{0}/vasp.5.4.4.pl2.tgz".format(os.getcwd())
+    url = "file://{0}/vasp-6.1.0.tar.bz2".format(os.getcwd())
     manual_download = True
 
-    version("6.4.2", sha256="a6cacdd43e7dc50ee585850cbe89bdf5e7fcb66237e2e6a8919cb8ee250d689d")
-    version("6.3.2", sha256="a6cacdd43e7dc50ee585850cbe89bdf5e7fcb66237e2e6a8919cb8ee250d689d")
-    version("6.3.0", sha256="adcf83bdfd98061016baae31616b54329563aa2739573f069dd9df19c2071ad3")
-    version("6.2.0", sha256="49e7ba351bd634bc5f5f67a8ef1e38e64e772857a1c02f602828898a84197e25")
-    version("6.1.1", sha256="e37a4dfad09d3ad0410833bcd55af6b599179a085299026992c2d8e319bf6927")
-    version("5.4.4.pl2", sha256="98f75fd75399a23d76d060a6155f4416b340a1704f256a00146f89024035bc8e")
-    version("5.4.4", sha256="5bd2449462386f01e575f9adf629c08cb03a13142806ffb6a71309ca4431cfb3")
+    version("6.4.2", sha256="a4e3e6e83ae5b2277cde634a30919a379d102ee3294dd8ea33c388bb52c17077")
+    version("6.4.1", sha256="d4d82577f29b2f5116b27a4e554e6d4bfc4525f2579307e00933e8600309344f")
+    version("6.4.0", sha256="b27b39d99a81f5ef6f1efe3931ec00dcb1dbbd99f53e7f927952c43fa0a8d826")
+    version("6.3.0", sha256="5c89e96ca485d64a3050ffcaa2833eda318a66dae9408a7217dd6af0e61bc813")
+    version("6.2.1", sha256="7ea7e0467af7b7550ee6d15b6b27a2ab7978c71a3b0575bc895f8135fabd55ca")
+    version("6.2.0", sha256="4ce132d588d518abac749522735ccffa72b0ae2be18fd866595628c4962a7e2d")
+    version("6.1.0", sha256="c50eb1bfb21ea5ac9cacf459b9b09c818365e6eb0390e4926eda521921c06c75")
 
-    resource(
-        name="vaspsol",
-        git="https://github.com/henniggroup/VASPsol.git",
-        tag="V1.0",
-        when="+vaspsol",
-    )
+    #  resource(
+    #      name="vaspsol",
+    #      git="https://github.com/henniggroup/VASPsol.git",
+    #      tag="V1.0",
+    #      when="+vaspsol",
+    #  )
 
     variant("profiling", default=False, description="Enable profiling")
     variant("collective", default=True, description="Enable collective MPI calls")
@@ -125,9 +125,3 @@ class Vasp(CMakePackage, CudaPackage):
             args += ["-DBLA_VENDOR=Arm"]
 
         return args
-
-    #  def setup_run_environment(self, env):
-    #      spec = self.spec
-    #      if "^nvhpc" in spec:
-    #          env.prepend_path("CMAKE_PREFIX_PATH", spec["nvhpc"].prefix)
-    #          env.prepend_path("CMAKE_PREFIX_PATH", join_path(spec["nvhpc"].prefix, "Linux_%s" % self.spec.target.family, spec["nvhpc"].version))
