@@ -1,4 +1,4 @@
-From 1caef04d90edb68cec4f65be8de874330574744b Mon Sep 17 00:00:00 2001
+From 07de5a8ba69aed9d5054ba4cc3fb8460cdf800cb Mon Sep 17 00:00:00 2001
 From: Simon Frasch <simon.frasch@cscs.ch>
 Date: Mon, 9 Oct 2023 17:16:35 +0200
 Subject: [PATCH] init
@@ -18,8 +18,12 @@ cmake
 cmake
 
 fix scalapack
+
+update
+
+update
 ---
- CMakeLists.txt            | 208 ++++++++++++++++++++++++++++++++++++++
+ CMakeLists.txt            | 213 ++++++++++++++++++++++++++++++++++++++
  cmake/FindFFTW.cmake      |  71 +++++++++++++
  cmake/FindFFTWOMP.cmake   |  71 +++++++++++++
  cmake/FindLibXC.cmake     |  59 +++++++++++
@@ -30,7 +34,7 @@ fix scalapack
  src/fftlib/CMakeLists.txt |   9 ++
  src/lib/CMakeLists.txt    |  32 ++++++
  src/parser/CMakeLists.txt |  11 ++
- 11 files changed, 714 insertions(+)
+ 11 files changed, 719 insertions(+)
  create mode 100644 CMakeLists.txt
  create mode 100644 cmake/FindFFTW.cmake
  create mode 100644 cmake/FindFFTWOMP.cmake
@@ -45,10 +49,10 @@ fix scalapack
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 new file mode 100644
-index 0000000..47f8c6b
+index 0000000..451b8b9
 --- /dev/null
 +++ b/CMakeLists.txt
-@@ -0,0 +1,208 @@
+@@ -0,0 +1,213 @@
 +cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 +set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 +
@@ -94,7 +98,7 @@ index 0000000..47f8c6b
 +
 +option(VASP_PROFILING "Enable profiling" OFF)
 +option(VASP_COLLECTIVE "Enable MPI collectives" OFF)
-+set(VASP_MPI_BLOCK "4000" CACHE STRING "MPI block size")
++set(VASP_MPI_BLOCK "8000" CACHE STRING "MPI block size")
 +set(VASP_HOST_NAME ${CMAKE_SYSTEM_NAME} CACHE STRING "Host system name")
 +option(VASP_AVOIDALLOC "Avoid automatic allocation" OFF)
 +option(VASP_VASP6 "Enable VASP 6.x features" ON)
@@ -104,6 +108,7 @@ index 0000000..47f8c6b
 +option(VASP_SHMEM_BCAST "Enable shared memory MPI bcast" OFF)
 +option(VASP_SHMEM_RPROJ "Enable shared memory for PAW projections" OFF)
 +option(VASP_SYSV "Enable shared-memory for ipcs and system-V" OFF)
++option(VASP_BSE "Enable BSE method" ON)
 +
 +option(VASP_OPENMP "Enable ScaLAPACK" OFF)
 +option(VASP_FFTLIB "Enable internal FFTLIB" ON)
@@ -161,6 +166,10 @@ index 0000000..47f8c6b
 +
 +if(VASP_SYSV)
 +    list(APPEND VASP_DEFINITIONS sysv)
++endif()
++
++if(VASP_BSE)
++    list(APPEND VASP_DEFINITIONS use_bse_te)
 +endif()
 +
 +
