@@ -97,6 +97,8 @@ class Relion(CMakePackage, CudaPackage):
         msg="Cuda version >= 12 support requires RELION version 4.0.1 or later.",
     )
 
+    patch("cub.patch", when="@3.1.2")
+
     # TODO: more externals to add
     # Spack packages needed
     # - Gctf

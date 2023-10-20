@@ -1,0 +1,9 @@
+diff --git a/src/acc/cuda/cub/util_namespace.cuh b/src/acc/cuda/cub/util_namespace.cuh
+index edb61260..99870871 100644
+--- a/src/acc/cuda/cub/util_namespace.cuh
++++ b/src/acc/cuda/cub/util_namespace.cuh
+@@ -44,3 +44,4 @@
+ #ifndef CUB_NS_POSTFIX
+ #define CUB_NS_POSTFIX
+ #endif
++#define CUB_NS_QUALIFIER cub
