@@ -1,14 +1,16 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 8667f19c..fb01446c 100644
+index 8667f19c..d8040fd8 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -190,6 +190,11 @@ endif()
+@@ -190,6 +190,13 @@ endif()
  
  option(FORCE_OWN_TBB "FORCE_OWN_TBB" OFF)
  
-+find_path(CUB_PATH NAMES cub/cub.h)
++find_path(CUB_PATH NAMES cub/cub.h PATH_SUFFIXES include PATHS ${CMAKE_PREFIX_PATH})
 +if(CUB_PATH)
 + include_directories(${CUB_PATH})
++else()
++ message(FATAL_ERROR "Cub not found!")
 +endif()
 +
  if (ALTCPU)
