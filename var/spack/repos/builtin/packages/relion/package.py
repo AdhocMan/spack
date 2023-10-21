@@ -91,11 +91,11 @@ class Relion(CMakePackage, CudaPackage):
     depends_on("ctffind", type="run")
     depends_on("motioncor2", type="run", when="+external_motioncor2")
 
-    conflicts(
-        "^cuda@12:",
-        when="@:4.0.0",
-        msg="Cuda version >= 12 support requires RELION version 4.0.1 or later.",
-    )
+    #  conflicts(
+    #      "^cuda@12:",
+    #      when="@:4.0.0",
+    #      msg="Cuda version >= 12 support requires RELION version 4.0.1 or later.",
+    #  )
 
     patch("cub.patch", when="@3.1.2")
 
