@@ -1,12 +1,12 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 8667f19c..d8040fd8 100644
+index 8667f19c..0468555f 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -190,6 +190,13 @@ endif()
  
  option(FORCE_OWN_TBB "FORCE_OWN_TBB" OFF)
  
-+find_path(CUB_PATH NAMES cub/cub.h PATH_SUFFIXES include PATHS ${CMAKE_PREFIX_PATH})
++find_path(CUB_PATH NAMES cub/cub.cuh PATH_SUFFIXES include cub/include PATHS ${CMAKE_PREFIX_PATH})
 +if(CUB_PATH)
 + include_directories(${CUB_PATH})
 +else()
@@ -26,16 +26,10 @@ index edb61260..99870871 100644
  #endif
 +#define CUB_NS_QUALIFIER cub
 diff --git a/src/acc/cuda/cuda_utils_cub.cuh b/src/acc/cuda/cuda_utils_cub.cuh
-index 3a6d7425..b6ad787c 100644
+index 3a6d7425..83898483 100644
 --- a/src/acc/cuda/cuda_utils_cub.cuh
 +++ b/src/acc/cuda/cuda_utils_cub.cuh
-@@ -7,15 +7,17 @@
- #include <stdio.h>
- #include <signal.h>
- #include <vector>
-+#include <cub/cub.h>
- // Because thrust uses CUB, thrust defines CubLog and CUB tries to redefine it,
- // resulting in warnings. This avoids those warnings.
+@@ -12,10 +12,11 @@
  #if(defined(CubLog) && defined(__CUDA_ARCH__) && (__CUDA_ARCH__<= 520)) // Intetionally force a warning for new arch
  	#undef CubLog
  #endif
