@@ -84,6 +84,7 @@ class Relion(CMakePackage, CudaPackage):
     depends_on("libtiff")
     depends_on("libpng", when="@4:")
 
+    depends_on("cub", when="+cuda")
     depends_on("cuda", when="+cuda")
     depends_on("cuda@9:", when="@3: +cuda")
     depends_on("tbb", when="+altcpu")
