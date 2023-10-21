@@ -1,3 +1,19 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 8667f19c..fb01446c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -190,6 +190,11 @@ endif()
+ 
+ option(FORCE_OWN_TBB "FORCE_OWN_TBB" OFF)
+ 
++find_path(CUB_PATH NAMES cub/cub.h)
++if(CUB_PATH)
++ include_directories(${CUB_PATH})
++endif()
++
+ if (ALTCPU)
+ 	
+ 	if (FORCE_OWN_TBB)
 diff --git a/src/acc/cuda/cub/util_namespace.cuh b/src/acc/cuda/cub/util_namespace.cuh
 index edb61260..99870871 100644
 --- a/src/acc/cuda/cub/util_namespace.cuh
