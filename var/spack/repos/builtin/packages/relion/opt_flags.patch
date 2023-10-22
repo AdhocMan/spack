@@ -1,0 +1,40 @@
+diff --git a/cmake/BuildTypes.cmake b/cmake/BuildTypes.cmake
+index db12c27e..00facaed 100644
+--- a/cmake/BuildTypes.cmake
++++ b/cmake/BuildTypes.cmake
+@@ -52,7 +52,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${RELION_DEFINITIONS_DEBUG}"
+ # -------------------------- 
+ 
+ # -- Compiler flags -------------------------------------------------
+-set(RELION_NVCC_FLAGS_RELWITHDEBINFO "${RELION_NVCC_FLAGS}" CACHE STRING "")
++set(RELION_NVCC_FLAGS_RELWITHDEBINFO "${RELION_NVCC_FLAGS} -O2 -lineinfo" CACHE STRING "")
+ # -- Linker flags ---------------------------------------------------
+ set(RELION_LINKER_FLAGS_RELWITHDEBINFO  " ")
+ 
+@@ -94,7 +94,7 @@ set(RELION_DEFINITIONS_RELWITHDEBINFO "-DDEBUG_CUDA")
+ 
+ # -- Compiler flags -------------------------------------------------
+ set(RELION_FLAGS_RELEASE "" CACHE STRING "")
+-set(RELION_NVCC_FLAGS_RELEASE "${RELION_NVCC_FLAGS} --disable-warnings" CACHE STRING "")
++set(RELION_NVCC_FLAGS_RELEASE "${RELION_NVCC_FLAGS} --disable-warnings -O3" CACHE STRING "")
+ # -- Linker flags ---------------------------------------------------
+ set(RELION_LINKER_FLAGS_RELEASE  "")
+ 
+@@ -135,7 +135,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${RELION_DEFINITIONS_REL
+ 
+ # -- Compiler flags -------------------------------------------------
+ set(RELION_FLAGS_PROFILING "" CACHE STRING "")
+-set(RELION_NVCC_FLAGS_PROFILING "${RELION_NVCC_FLAGS} -lineinfo" CACHE STRING "")
++set(RELION_NVCC_FLAGS_PROFILING "${RELION_NVCC_FLAGS} -lineinfo -O3" CACHE STRING "")
+ # -- Linker flags ---------------------------------------------------
+ set(RELION_LINKER_FLAGS_PROFILING  "")
+ 
+@@ -165,7 +165,7 @@ set(CMAKE_CXX_FLAGS_PROFILING "${CMAKE_CXX_FLAGS_PROFILING} ${RELION_DEFINITIONS
+ # ----------------------------------
+ # -- Compiler flags -------------------------------------------------
+ set(RELION_FLAGS_BENCHMARKING "" CACHE STRING "")
+-set(RELION_NVCC_FLAGS_BENCHMARKING "${RELION_NVCC_FLAGS} " CACHE STRING "")
++set(RELION_NVCC_FLAGS_BENCHMARKING "${RELION_NVCC_FLAGS} -O3" CACHE STRING "")
+ # -- Linker flags ---------------------------------------------------
+ set(RELION_LINKER_FLAGS_BENCHMARKING  "")
+ 

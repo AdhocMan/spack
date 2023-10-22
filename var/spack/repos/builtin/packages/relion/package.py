@@ -84,7 +84,7 @@ class Relion(CMakePackage, CudaPackage):
     depends_on("libtiff")
     depends_on("libpng", when="@4:")
 
-    depends_on("cub", when="+cuda")
+    #  depends_on("cub", when="@3.1.2 +cuda")
     depends_on("cuda", when="+cuda")
     depends_on("cuda@9:", when="@3: +cuda")
     depends_on("tbb", when="+altcpu")
@@ -98,6 +98,7 @@ class Relion(CMakePackage, CudaPackage):
     #      msg="Cuda version >= 12 support requires RELION version 4.0.1 or later.",
     #  )
 
+    patch("opt_flags.patch", when="@3.0.0:")
     patch("cub.patch", when="@3.1.2")
 
     # TODO: more externals to add
