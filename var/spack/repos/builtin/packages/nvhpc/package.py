@@ -463,6 +463,12 @@ class Nvhpc(Package):
             env.set("MPIF77", join_path(mpi_prefix.bin, "mpif77"))
             env.set("MPIF90", join_path(mpi_prefix.bin, "mpif90"))
 
+            # Use the spack compiler wrappers under MPI
+            env.set("OMPI_CC", spack_cc)
+            env.set("OMPI_CXX", spack_cxx)
+            env.set("OMPI_FC", spack_fc)
+            env.set("OMPI_F77", spack_f77)
+
             env.prepend_path("LD_LIBRARY_PATH", mpi_prefix.lib)
 
     def setup_dependent_package(self, module, dependent_spec):
