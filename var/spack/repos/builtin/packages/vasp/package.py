@@ -75,7 +75,7 @@ class Vasp(CMakePackage, CudaPackage):
     depends_on("fftw-api@3:+openmp", when="+openmp")
     depends_on("mpi", type=("build", "link", "run"))
     depends_on("scalapack", when="+scalapack")
-    depends_on("nvhpc~blas~lapack", when="+cuda")
+    depends_on("nvhpc", when="+cuda")
     depends_on("hdf5+fortran", when="+hdf5")
     depends_on("libxc~cuda", when="+libxc")
     depends_on("wannier90", when="+wannier90")
