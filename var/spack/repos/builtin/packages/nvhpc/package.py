@@ -458,6 +458,11 @@ class Nvhpc(Package):
                 )
             )
 
+            env.set("MPICC", join_path(mpi_prefix.bin, "mpicc"))
+            env.set("MPICXX", join_path(mpi_prefix.bin, "mpic++"))
+            env.set("MPIF77", join_path(mpi_prefix.bin, "mpif77"))
+            env.set("MPIF90", join_path(mpi_prefix.bin, "mpif90"))
+
             env.prepend_path("LD_LIBRARY_PATH", mpi_prefix.lib)
 
     def setup_dependent_package(self, module, dependent_spec):
