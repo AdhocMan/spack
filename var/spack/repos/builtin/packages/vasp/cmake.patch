@@ -1,11 +1,23 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 new file mode 100644
-index 0000000..e142c4c
+index 0000000..40febc7
 --- /dev/null
 +++ b/CMakeLists.txt
-@@ -0,0 +1,186 @@
+@@ -0,0 +1,192 @@
 +cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 +set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
++
++# set default flags. Must be called before project() enables languages.
++macro(set_mode_flags languages mode value)
++	foreach(lang ${languages})
++		set(CMAKE_${lang}_FLAGS_${mode} "${value}" CACHE STRING "")
++	endforeach()
++endmacro()
++
++set_mode_flags("C;CXX;Fortran" "DEBUG" "-g")
++set_mode_flags("C;CXX;Fortran" "RELWITHDEBINFO" "-g -DNDEBUG")
++set_mode_flags("C;CXX;Fortran" "RELEASE" "-DNDEBUG")
++set_mode_flags("C;CXX;Fortran" "MINSIZEREL" "-DNDEBUG")
 +
 +project(vasp
 +    VERSION 6.3.0
@@ -28,7 +40,7 @@ index 0000000..e142c4c
 +if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 +	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
 +	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-+		"Debug" "Release" "MinSizeRel" "RelWithDebInfo"
++		"Debug" "Release" "RelWithDebInfo"
 +		)
 +endif()
 +
@@ -73,9 +85,10 @@ index 0000000..e142c4c
 +
 +set(CMAKE_CUDA_ARCHITECTURES "native" CACHE STRING "Cuda architectures list or native for automatic detection. Example: \"60;70;80\"")
 +
-+set(VASP_EXTERNAL_LIBS)
-+set(VASP_FORTRAN_FLAGS)
++# Additional options for source file selection and optimization flags
++include(cmake/sources_and_flags_options.cmake)
 +
++set(VASP_EXTERNAL_LIBS)
 +
 +set(VASP_DEFINITIONS
 +	MPI
@@ -135,7 +148,7 @@ index 0000000..e142c4c
 +endif()
 +
 +
-+find_package(MPI MODULE COMPONENTS Fortran)
++find_package(MPI MODULE REQUIRED COMPONENTS Fortran)
 +list(APPEND VASP_EXTERNAL_LIBS MPI::MPI_Fortran)
 +
 +set(BLA_SIZEOF_INTEGER 4) # only look for 32-bit BLAS / LAPACK
@@ -176,26 +189,19 @@ index 0000000..e142c4c
 +	list(APPEND VASP_EXTERNAL_LIBS "-cudalib=cublas,cusolver,cufft,nccl -cuda -acc ${VASP_GPU_FLAG}")
 +endif()
 +
-+
-+# set compiler specific settings
-+# note: free and fixed format flags are set through target properties
-+if(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-+	list(APPEND VASP_FORTRAN_FLAGS -ffree-line-length-none -w -ffpe-summary=invalid,zero,overflow -fallow-argument-mismatch)
-+elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC")
++if(CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC")
 +	find_package(QD MODULE REQUIRED)
 +	list(APPEND VASP_EXTERNAL_LIBS QD::qd)
 +	list(APPEND VASP_DEFINITIONS qd_emulate)
-+	list(APPEND VASP_FORTRAN_FLAGS -Mbackslash -Mlarge_arrays -Mextend -Minform=severe)
 +endif()
-+
 +
 +add_subdirectory(src)
 diff --git a/cmake/FindFFTW.cmake b/cmake/FindFFTW.cmake
 new file mode 100644
-index 0000000..6fb3f70
+index 0000000..e027f2a
 --- /dev/null
 +++ b/cmake/FindFFTW.cmake
-@@ -0,0 +1,125 @@
+@@ -0,0 +1,129 @@
 +#.rst:
 +# FindFFTW
 +# -----------
@@ -241,9 +247,9 @@ index 0000000..6fb3f70
 +            set(_FFTW_${name}_DEFAULT_PATH_SWITCH NO_DEFAULT_PATH)
 +            set(FFTW_${name}_LIBRARIES "BLAS::BLAS" CACHE STRING "" FORCE)
 +            foreach(blas_lib IN LISTS BLAS_LIBRARIES)
-+                get_filename_component(blas_lib_dir ${blas_lib} DIRECTORY)
-+                get_filename_component(blas_paraent_lib_dir ${blas_lib_dir} DIRECTORY)
-+                list(APPEND _FFTW_${name}_PATHS ${blas_lib_dir} ${blas_paraent_lib_dir})
++                cmake_path(GET blas_lib PARENT_PATH blas_lib_dir)
++                cmake_path(GET blas_lib_dir PARENT_PATH blas_parent_lib_dir)
++                list(APPEND _FFTW_${name}_PATHS ${blas_lib_dir} ${blas_parent_lib_dir})
 +            endforeach()
 +        endif()
 +    endif()
@@ -306,12 +312,16 @@ index 0000000..6fb3f70
 +foreach(comp IN LISTS FFTW_COMP)
 +    if(${comp} STREQUAL "OMP")
 +        find_ffftw_component(OMP fftw3_omp fftw_init_threads)
-+        target_link_libraries(FFTW::FFTW_OMP INTERFACE FFTW::FFTW_SERIAL)
++        if(TARGET FFTW::FFTW_OMP AND TARGET FFTW::FFTW_SERIAL)
++            target_link_libraries(FFTW::FFTW_OMP INTERFACE FFTW::FFTW_SERIAL)
++        endif()
 +        list(APPEND FFTW_REQUIRED_VARS FFTW_OMP_INCLUDE_DIRS FFTW_OMP_LIBRARIES)
 +    elseif(${comp} STREQUAL "THREADS")
 +        find_ffftw_component(THREADS fftw3_threads fftw_init_threads)
 +        list(APPEND FFTW_REQUIRED_VARS FFTW_THREADS_INCLUDE_DIRS FFTW_THREADS_LIBRARIES)
-+        target_link_libraries(FFTW::FFTW_THREADS INTERFACE FFTW::FFTW_SERIAL)
++        if(TARGET FFTW::FFTW_THREADS AND TARGET FFTW::FFTW_SERIAL)
++            target_link_libraries(FFTW::FFTW_THREADS INTERFACE FFTW::FFTW_SERIAL)
++        endif()
 +    elseif(NOT ${comp} STREQUAL "SERIAL")
 +        message(FATAL_ERROR "FindFFTW: Illegal component \"${comp}\"")
 +    endif()
@@ -592,12 +602,99 @@ index 0000000..82cf359
 +
 +# prevent clutter in cache
 +MARK_AS_ADVANCED(WANNIER90_FOUND WANNIER90_LIBRARIES WANNIER90_INCLUDE_DIRS)
+diff --git a/cmake/sources_and_flags_options.cmake b/cmake/sources_and_flags_options.cmake
+new file mode 100644
+index 0000000..485e7ea
+--- /dev/null
++++ b/cmake/sources_and_flags_options.cmake
+@@ -0,0 +1,81 @@
++set(_VASP_OFLAG_DEFAULT -O2)
++set(_VASP_OFLAG_O1 -O1)
++set(_VASP_OFLAG_O2 -O2)
++set(_VASP_OFLAG_O3 -O3)
++set(_VASP_OFLAG_IN ${_VASP_OFLAG_DEFAULT})
++set(_VASP_OFLAG_LIB ${_VASP_OFLAG_O1})
++set(_VASP_SOURCES_O1)
++set(_VASP_SOURCES_O2)
++set(_VASP_SOURCES_O3)
++set(_VASP_SOURCES_IN)
++
++
++file(READ "${PROJECT_SOURCE_DIR}/src/.objects" VASP_OBJECTS_CONTENT)
++
++# convert a string containing object file names to a list of fortran files with ".F" suffix
++function(objects_to_fortran_files objects_string out_var_name)
++	string(REGEX MATCHALL "[a-zA-Z_0-9-]+\.o" objects ${objects_string})
++	set(_files)
++	foreach(obj IN LISTS objects)
++		string(REGEX REPLACE "\\.[^.]*$" "" file_name ${obj})
++		list(APPEND _files ${file_name}.F)
++	endforeach()
++	set(${out_var_name}  ${_files} PARENT_SCOPE)
++endfunction()
++
++string(REGEX MATCH ".*SOURCE_O1" _VASP_OBJECTS ${VASP_OBJECTS_CONTENT})
++string(REGEX MATCH "SOURCE_O1.*SOURCE_O2" _VASP_OBJECTS_O1 ${VASP_OBJECTS_CONTENT})
++string(REGEX MATCH "SOURCE_O2.*SOURCE_IN" _VASP_OBJECTS_O2 ${VASP_OBJECTS_CONTENT})
++string(REGEX MATCH "SOURCE_IN.*" _VASP_OBJECTS_IN ${VASP_OBJECTS_CONTENT})
++objects_to_fortran_files(${_VASP_OBJECTS} _VASP_SOURCES_DEFAULT)
++objects_to_fortran_files(${_VASP_OBJECTS_O1} _VASP_SOURCES_O1)
++objects_to_fortran_files(${_VASP_OBJECTS_O2} _VASP_SOURCES_O2)
++objects_to_fortran_files(${_VASP_OBJECTS_IN} _VASP_SOURCES_IN)
++
++set(_VASP_SOURCES "fftmpiw.F;fftmpi_map.F;fftw3d.F;fft3dlib.F")
++
++
++#################################
++# Compiler specific modifications
++#################################
++
++# Languages must be enabled to check compiler id
++enable_language(C CXX Fortran)
++
++set(VASP_FORTRAN_FLAGS)
++# note: free and fixed format flags are set through target properties
++if(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
++	list(APPEND VASP_FORTRAN_FLAGS -ffree-line-length-none -w -ffpe-summary=invalid,zero,overflow -fallow-argument-mismatch)
++	# extend list of specially optimized files
++	list(APPEND _VASP_SOURCES_O1 fftw3d.F fftmpi.F fftmpiw.F)
++	list(APPEND _VASP_SOURCES_O2 fft3dlib.F)
++elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC")
++	list(APPEND VASP_FORTRAN_FLAGS -Mbackslash -Mlarge_arrays -Mextend -Minform=severe)
++    set(_VASP_OFLAG_DEFAULT -fast)
++	# overwrite list of specially optimized files
++    set(_VASP_SOURCES_O1 pade_fit.F minimax_dependence.F)
++    set(_VASP_SOURCES_O2 pead.F)
++endif()
++
++
++#########################
++# Set user facing options
++#########################
++
++# set default optimization flags. Input from cmake/default_flags.cmake
++set(VASP_OFLAG_DEFAULT "${_VASP_OFLAG_DEFAULT}" CACHE STRING "Default optimization flag")
++set(VASP_OFLAG_O1 "${_VASP_OFLAG_O1}" CACHE STRING "")
++set(VASP_OFLAG_O2 "${_VASP_OFLAG_O2}" CACHE STRING "")
++set(VASP_OFLAG_O3 "${_VASP_OFLAG_O3}" CACHE STRING "")
++set(VASP_OFLAG_LIB "${_VASP_OFLAG_LIB}" CACHE STRING "")
++set(VASP_OFLAG_IN "${_VASP_OFLAG_IN}" CACHE STRING "")
++set(VASP_SOURCES_O1 "${_VASP_SOURCES_O1}" CACHE STRING "")
++set(VASP_SOURCES_O2 "${_VASP_SOURCES_O2}" CACHE STRING "")
++set(VASP_SOURCES_O3 "${_VASP_SOURCES_O3}" CACHE STRING "")
++set(VASP_SOURCES_IN "${_VASP_SOURCES_IN}" CACHE STRING "")
++set(VASP_SOURCES "${_VASP_SOURCES}" CACHE STRING "Additional files to build")
++set(VASP_SOURCES_DEFAULT "${_VASP_SOURCES_DEFAULT}" CACHE STRING "List of default sources to build")
++mark_as_advanced(VASP_SOURCES_DEFAULT) # long list, hide by default in gui
++
++
++
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
 new file mode 100644
-index 0000000..4a24ea6
+index 0000000..4a5d380
 --- /dev/null
 +++ b/src/CMakeLists.txt
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,67 @@
 +function(vasp_create_executable name sources)
 +	add_executable(${name} ${sources})
 +	target_compile_definitions(${name} PRIVATE ${VASP_DEFINITIONS})
@@ -612,17 +709,9 @@ index 0000000..4a24ea6
 +endfunction()
 +
 +
-+file(READ ".objects" VASP_OBJECTS_CONTENT)
++set(VASP_SOURCES ${VASP_SOURCES} ${VASP_SOURCES_DEFAULT})
++list(APPEND VASP_SOURCES main.F)
 +
-+string(REGEX MATCHALL "[a-zA-Z_0-9-]+\.o" VASP_OBJECTS ${VASP_OBJECTS_CONTENT})
-+
-+set(VASP_SOURCES)
-+foreach(object IN LISTS VASP_OBJECTS)
-+    string(REGEX REPLACE "\\.[^.]*$" "" file_name ${object})
-+    list(APPEND VASP_SOURCES ${file_name}.F)
-+endforeach()
-+
-+list(APPEND VASP_SOURCES fftmpiw.F fftmpi_map.F fftw3d.F fft3dlib.F main.F)
 +list(REMOVE_ITEM VASP_SOURCES
 +	wave_gpu.F # does not exist
 +	)
@@ -632,6 +721,24 @@ index 0000000..4a24ea6
 +		)
 +endif()
 +list(REMOVE_DUPLICATES VASP_SOURCES)
++
++# set optmization flags
++foreach(source IN LISTS VASP_SOURCES)
++	set(_opt_flag ${VASP_OFLAG_DEFAULT})
++	if(${source} IN_LIST VASP_SOURCES_O3)
++		set(_opt_flag ${VASP_OFLAG_O3})
++	endif()
++	if(${source} IN_LIST VASP_SOURCES_O2)
++		set(_opt_flag ${VASP_OFLAG_O2})
++	endif()
++	if(${source} IN_LIST VASP_SOURCES_O1)
++		set(_opt_flag ${VASP_OFLAG_O1})
++	endif()
++	if(${source} IN_LIST VASP_SOURCES_IN)
++		set(_opt_flag ${VASP_OFLAG_IN})
++	endif()
++	set_source_files_properties(${source} PROPERTIES COMPILE_FLAGS "${_opt_flag}")
++endforeach()
 +
 +if(VASP_FFTLIB)
 +	add_subdirectory(fftlib)
@@ -657,10 +764,10 @@ index 0000000..4a24ea6
 +
 diff --git a/src/fftlib/CMakeLists.txt b/src/fftlib/CMakeLists.txt
 new file mode 100644
-index 0000000..8b67b0f
+index 0000000..0d61168
 --- /dev/null
 +++ b/src/fftlib/CMakeLists.txt
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,11 @@
 +add_library(fftlib_objects OBJECT
 +	src/fftlib.cpp
 +	)
@@ -671,9 +778,10 @@ index 0000000..8b67b0f
 +# __fp16 type used by some FFTW implementations not supported by some compilers like nvhpc
 +target_compile_definitions(fftlib_objects PRIVATE FFTLIB_THREADSAFE __fp16=float)
 +target_include_directories(fftlib_objects PRIVATE include)
++target_compile_options(fftlib_objects PRIVATE ${VASP_OFLAG_DEFAULT})
 diff --git a/src/lib/CMakeLists.txt b/src/lib/CMakeLists.txt
 new file mode 100644
-index 0000000..a07dc17
+index 0000000..cdfbe2b
 --- /dev/null
 +++ b/src/lib/CMakeLists.txt
 @@ -0,0 +1,20 @@
@@ -696,13 +804,13 @@ index 0000000..a07dc17
 +
 +target_link_libraries(lib_objects PRIVATE ${VASP_EXTERNAL_LIBS} linpack_objects)
 +set_target_properties(lib_objects PROPERTIES Fortran_FORMAT FREE)
-+target_compile_options(lib_objects PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${VASP_LIB_FORTRAN_FLAGS}>)
++target_compile_options(lib_objects PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${VASP_LIB_FORTRAN_FLAGS}> ${VASP_OFLAG_LIB})
 diff --git a/src/parser/CMakeLists.txt b/src/parser/CMakeLists.txt
 new file mode 100644
-index 0000000..a57953c
+index 0000000..a8438dc
 --- /dev/null
 +++ b/src/parser/CMakeLists.txt
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,12 @@
 +add_library(parser_objects OBJECT
 +	sites.cpp functions.cpp radial.cpp basis.cpp
 +	lex.yy.c locproj.tab.c yywrap.c
@@ -714,3 +822,4 @@ index 0000000..a57953c
 +set_property(TARGET parser_objects PROPERTY CXX_STANDARD_REQUIRED On)
 +# __fp16 type used by some FFTW implementations not supported by some compilers like nvhpc
 +target_compile_definitions(parser_objects PRIVATE YY_parse_DEBUG=1 __fp16=float)
++target_compile_options(parser_objects PRIVATE ${VASP_OFLAG_DEFAULT})
