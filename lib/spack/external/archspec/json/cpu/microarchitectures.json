@@ -3147,7 +3147,7 @@
               {
                   "versions": "23.3:",
                   "name": "neoverse-v2",
-                  "flags": "-tp {name}"
+                  "flags": "-tp host"
               }
           ]
       }
